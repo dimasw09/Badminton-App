@@ -51,32 +51,49 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: ctx,
       builder: (context) {
-        final _setsPlayedController =
-            TextEditingController(text: player.setsPlayed.toString());
-
-        return AlertDialog(
-          title: Text('Edit Sets Played'),
-          content: TextField(
-            decoration: InputDecoration(labelText: 'Sets Played'),
-            controller: _setsPlayedController,
-            keyboardType: TextInputType.number,
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: Text('Save'),
-              onPressed: () {
-                final newSetsPlayed = int.parse(_setsPlayedController.text);
-                _editPlayer(player, newSetsPlayed);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Edit Sets Played'),
+              content: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () {
+                      setState(() {
+                        if (player.setsPlayed > 0) player.setsPlayed--;
+                      });
+                    },
+                  ),
+                  Text(player.setsPlayed.toString()),
+                  IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: () {
+                      setState(() {
+                        player.setsPlayed++;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ElevatedButton(
+                  child: Text('Save'),
+                  onPressed: () {
+                    _editPlayer(player, player.setsPlayed);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -173,8 +190,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           return Card(
                             child: ListTile(
                               title: Text(player.name),
-                              subtitle:
-                                  Text('Sets Played: ${player.setsPlayed}'),
+                              subtitle: Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.remove),
+                                    onPressed: () {
+                                      setState(() {
+                                        if (player.setsPlayed > 0)
+                                          player.setsPlayed--;
+                                      });
+                                    },
+                                  ),
+                                  Text(player.setsPlayed.toString()),
+                                  IconButton(
+                                    icon: Icon(Icons.add),
+                                    onPressed: () {
+                                      setState(() {
+                                        player.setsPlayed++;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PlayerForm extends StatefulWidget {
-  final Function onAddPlayer;
+  final Function(String, int) onAddPlayer;
 
   PlayerForm({required this.onAddPlayer});
 
@@ -11,17 +11,15 @@ class PlayerForm extends StatefulWidget {
 
 class _PlayerFormState extends State<PlayerForm> {
   final _nameController = TextEditingController();
-  final _setsPlayedController = TextEditingController();
+  int _setsPlayed = 1;
 
   void _submitData() {
     final enteredName = _nameController.text;
-    final enteredSets = int.parse(_setsPlayedController.text);
-
-    if (enteredName.isEmpty || enteredSets <= 0) {
+    if (enteredName.isEmpty || _setsPlayed <= 0) {
       return;
     }
 
-    widget.onAddPlayer(enteredName, enteredSets);
+    widget.onAddPlayer(enteredName, _setsPlayed);
     Navigator.of(context).pop();
   }
 
@@ -37,11 +35,33 @@ class _PlayerFormState extends State<PlayerForm> {
             TextField(
               decoration: InputDecoration(labelText: 'Name'),
               controller: _nameController,
+              onSubmitted: (_) => _submitData(),
             ),
-            TextField(
-              decoration: InputDecoration(labelText: 'Sets Played'),
-              controller: _setsPlayedController,
-              keyboardType: TextInputType.number,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Sets Played: $_setsPlayed'),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.remove),
+                      onPressed: () {
+                        setState(() {
+                          if (_setsPlayed > 0) _setsPlayed--;
+                        });
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: () {
+                        setState(() {
+                          _setsPlayed++;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
             ElevatedButton(
               child: Text('Add Player'),
