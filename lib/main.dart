@@ -9,7 +9,7 @@ class BadmintonCostSplitterApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Badminton Cost Splitter',
+      title: 'Badminton Cost Split',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         textTheme: GoogleFonts.latoTextTheme(
