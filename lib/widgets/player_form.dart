@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PlayerForm extends StatefulWidget {
-  final Function(String, int) onAddPlayer;
+  final Function onAddPlayer;
 
   PlayerForm({required this.onAddPlayer});
 
@@ -11,15 +11,20 @@ class PlayerForm extends StatefulWidget {
 
 class _PlayerFormState extends State<PlayerForm> {
   final _nameController = TextEditingController();
-  int _setsPlayed = 1;
+  int _setsPlayed = 0;
 
   void _submitData() {
     final enteredName = _nameController.text;
-    if (enteredName.isEmpty || _setsPlayed <= 0) {
+
+    if (enteredName.isEmpty) {
       return;
     }
 
-    widget.onAddPlayer(enteredName, _setsPlayed);
+    widget.onAddPlayer(
+      enteredName,
+      _setsPlayed,
+    );
+
     Navigator.of(context).pop();
   }
 
@@ -27,7 +32,7 @@ class _PlayerFormState extends State<PlayerForm> {
   Widget build(BuildContext context) {
     return Card(
       elevation: 5,
-      child: Padding(
+      child: Container(
         padding: EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -39,10 +44,10 @@ class _PlayerFormState extends State<PlayerForm> {
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+              children: <Widget>[
                 Text('Sets Played: $_setsPlayed'),
                 Row(
-                  children: [
+                  children: <Widget>[
                     IconButton(
                       icon: Icon(Icons.remove),
                       onPressed: () {

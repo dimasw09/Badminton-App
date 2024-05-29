@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/player.dart';
 import '../widgets/player_form.dart';
 
@@ -7,7 +8,7 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<Player> _players = [];
   final TextEditingController _rentalDurationController =
       TextEditingController();
@@ -19,11 +20,40 @@ class _HomeScreenState extends State<HomeScreen> {
   int _rentalCostPerHour = 35000;
   int _shuttlecockCost = 51000;
 
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  late AnimationController _fadeInAnimationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeInAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 500),
+    );
+    _initializeNotifications();
+  }
+
+  void _initializeNotifications() async {
+    var initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    var initializationSettingsIOS =
+        DarwinInitializationSettings(); // Corrected name
+    var initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid, iOS: initializationSettingsIOS);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
   void _addPlayer(String name, int setsPlayed) {
     final newPlayer = Player(name: name, setsPlayed: setsPlayed);
     setState(() {
       _players.add(newPlayer);
     });
+    _showNotification(name);
+
+    // Animasi fade in
+    _fadeInAnimationController.forward();
   }
 
   void _editPlayer(Player player, int newSetsPlayed) {
@@ -33,21 +63,118 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _deletePlayer(Player player) {
-    setState(() {
-      _players.remove(player);
-    });
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete ${player.name}?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _players.remove(player);
+              });
+              Navigator.of(context).pop();
+            },
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startAddNewPlayer(BuildContext ctx) {
-    showModalBottomSheet(
+    final TextEditingController _setsPlayedController = TextEditingController();
+    int setsPlayed = 0;
+
+    showDialog(
       context: ctx,
       builder: (_) {
-        return PlayerForm(onAddPlayer: _addPlayer);
+        String playerName = '';
+        return AlertDialog(
+          title: Text('Add New Player'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: InputDecoration(labelText: 'Player Name'),
+                onChanged: (value) {
+                  playerName = value;
+                },
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Sets Played'),
+                  IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () {
+                      if (setsPlayed > 0) {
+                        setState(() {
+                          setsPlayed--;
+                          _setsPlayedController.text = setsPlayed.toString();
+                        });
+                      }
+                    },
+                  ),
+                  SizedBox(
+                    width: 40,
+                    child: TextField(
+                      controller: _setsPlayedController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      onChanged: (value) {
+                        setState(() {
+                          setsPlayed = int.parse(value);
+                        });
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: () {
+                      setState(() {
+                        setsPlayed++;
+                        _setsPlayedController.text = setsPlayed.toString();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: Text('Add Player'),
+              onPressed: () {
+                if (playerName.isNotEmpty) {
+                  _addPlayer(playerName, setsPlayed);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
       },
     );
   }
 
   void _startEditPlayer(BuildContext ctx, Player player) {
+    int newSetsPlayed = player.setsPlayed;
+
     showDialog(
       context: ctx,
       builder: (context) {
@@ -62,16 +189,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icon(Icons.remove),
                     onPressed: () {
                       setState(() {
-                        if (player.setsPlayed > 0) player.setsPlayed--;
+                        if (newSetsPlayed > 0) newSetsPlayed--;
                       });
                     },
                   ),
-                  Text(player.setsPlayed.toString()),
+                  Text(newSetsPlayed.toString()),
                   IconButton(
                     icon: Icon(Icons.add),
                     onPressed: () {
                       setState(() {
-                        player.setsPlayed++;
+                        newSetsPlayed++;
                       });
                     },
                   ),
@@ -87,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ElevatedButton(
                   child: Text('Save'),
                   onPressed: () {
-                    _editPlayer(player, player.setsPlayed);
+                    _editPlayer(player, newSetsPlayed);
                     Navigator.of(context).pop();
                   },
                 ),
@@ -97,6 +224,21 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showNotification(String playerName) async {
+    var androidPlatformChannelSpecifics = const AndroidNotificationDetails(
+        'your channel id', 'your channel name',
+        importance: Importance.max, priority: Priority.high, ticker: 'ticker');
+
+    var iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(); // Corrected name
+    var platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics);
+    await flutterLocalNotificationsPlugin.show(0, 'New Player Added',
+        '$playerName has been added to the game', platformChannelSpecifics,
+        payload: 'item x');
   }
 
   double _calculateCostPerPerson(Player player) {
@@ -118,6 +260,14 @@ class _HomeScreenState extends State<HomeScreen> {
       _rentalCostPerHour = int.parse(_rentalCostController.text);
       _shuttlecockCost = int.parse(_shuttlecockCostController.text);
     });
+
+    // Tampilkan snackbar sebagai konfirmasi
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Costs updated successfully'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -172,71 +322,60 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Expanded(
-            child: Card(
-              elevation: 5,
-              margin: EdgeInsets.all(10),
-              child: Padding(
-                padding: EdgeInsets.all(10),
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      'Player Costs',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    SizedBox(height: 10),
-                    Expanded(
-                      child: ListView(
-                        children: _players.map((player) {
-                          return Card(
-                            child: ListTile(
-                              title: Text(player.name),
-                              subtitle: Row(
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.remove),
-                                    onPressed: () {
-                                      setState(() {
-                                        if (player.setsPlayed > 0)
-                                          player.setsPlayed--;
-                                      });
-                                    },
-                                  ),
-                                  Text(player.setsPlayed.toString()),
-                                  IconButton(
-                                    icon: Icon(Icons.add),
-                                    onPressed: () {
-                                      setState(() {
-                                        player.setsPlayed++;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.edit),
-                                    onPressed: () =>
-                                        _startEditPlayer(context, player),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.delete),
-                                    onPressed: () => _deletePlayer(player),
-                                  ),
-                                ],
-                              ),
-                              leading: Text(
-                                'Rp ${_calculateCostPerPerson(player).toStringAsFixed(2)}',
-                                style: TextStyle(
-                                    color: Theme.of(context).primaryColor),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+            child: AnimatedBuilder(
+              animation: _fadeInAnimationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeInAnimationController.value,
+                  child: child,
+                );
+              },
+              child: Card(
+                elevation: 5,
+                margin: EdgeInsets.all(10),
+                child: Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        'Player Costs',
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 10),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: _players.length,
+                          itemBuilder: (ctx, index) {
+                            final player = _players[index];
+                            return Card(
+                              margin: EdgeInsets.symmetric(
+                                  vertical: 5, horizontal: 10),
+                              child: ListTile(
+                                title: Text(player.name,
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(
+                                  'Sets Played: ${player.setsPlayed}',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                                trailing: Text(
+                                  'Rp ${_calculateCostPerPerson(player).toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                      color: Theme.of(context).primaryColor,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                leading: IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deletePlayer(player),
+                                ),
+                                onTap: () => _startEditPlayer(context, player),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
