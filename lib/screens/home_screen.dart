@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/player.dart';
-import '../widgets/player_form.dart';
+import '../providers/theme_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -38,8 +39,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _initializeNotifications() async {
     var initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    var initializationSettingsIOS =
-        DarwinInitializationSettings(); // Corrected name
+    var initializationSettingsIOS = DarwinInitializationSettings();
     var initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid, iOS: initializationSettingsIOS);
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
@@ -231,8 +231,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'your channel id', 'your channel name',
         importance: Importance.max, priority: Priority.high, ticker: 'ticker');
 
-    var iOSPlatformChannelSpecifics =
-        DarwinNotificationDetails(); // Corrected name
+    var iOSPlatformChannelSpecifics = DarwinNotificationDetails();
     var platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iOSPlatformChannelSpecifics);
@@ -261,7 +260,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _shuttlecockCost = int.parse(_shuttlecockCostController.text);
     });
 
-    // Tampilkan snackbar sebagai konfirmasi
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Costs updated successfully'),
@@ -272,10 +270,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Badminton Cost Splitter'),
         actions: <Widget>[
+          IconButton(
+            icon: Icon(
+                themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode),
+            onPressed: () {
+              themeProvider.toggleTheme();
+            },
+          ),
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () => _startAddNewPlayer(context),
@@ -355,9 +362,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     style:
                                         TextStyle(fontWeight: FontWeight.bold)),
                                 subtitle: Text(
-                                  'Sets Played: ${player.setsPlayed}',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
+                                    'Sets Played: ${player.setsPlayed}',
+                                    style: TextStyle(color: Colors.grey)),
                                 trailing: Text(
                                   'Rp ${_calculateCostPerPerson(player).toStringAsFixed(2)}',
                                   style: TextStyle(
